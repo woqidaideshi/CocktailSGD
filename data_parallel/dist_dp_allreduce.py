@@ -98,16 +98,18 @@ class AllReduceDP:
                 print("--------before _allreduce_gradients profile_mark_allreduce_end---")
                 self.profile_mark_allreduce_end()
             else:
-                print("--------before _allreduce_gradients profile_mark_allreduce_start in loop---")
+                print("--------before _allreduce_gradients profile_mark_allreduce_start in for loop---")
+                param_count = 0
                 for name, para in self.module.named_parameters():
                     if para.grad is None:
                         continue
-                    print("--------before _allreduce_gradients profile_mark_allreduce_start in loop---")
+                    print("--------before _allreduce_gradients profile_mark_allreduce_start in loop {}---".format(param_count))
                     self.profile_mark_allreduce_start(name)
-                    print("--------before _allreduce_gradients all_reduce in loop---")
+                    print("--------before _allreduce_gradients all_reduce in loop {}---".format(param_count))
                     self.dp_comm.all_reduce(para.grad, stream=cupy_dp_stream)
-                    print("--------before _allreduce_gradients profile_mark_allreduce_end in loop---")
+                    print("--------before _allreduce_gradients profile_mark_allreduce_end in loop {}---".format(param_count))
                     self.profile_mark_allreduce_end(name)
+                    param_count += 1
             print("--------before _allreduce_gradients precord_event")
             self.dp_comm_stream.record_event(self.allreduce_grad_ready_event)
             print("--------after _allreduce_gradients precord_event")

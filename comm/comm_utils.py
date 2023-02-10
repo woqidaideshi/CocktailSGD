@@ -73,7 +73,7 @@ def default_init(args):
         # the first time will raise exception, so the following code is skipped.
         print('destroy comm, increase port for 1. (this could cause problem)')
         url = ':'.join(args.dist_url.split(':')[:-1])
-        port = int(args.dist_url.split(':')[-1]) + 1
+        port = int(args.dist_url.split(':')[-1]) #  + 1
         args.dist_url = f"{url}:{port}"
         print(f"new master url: {args.dist_url}")
     except:
@@ -117,7 +117,7 @@ def init_communicators(args):
                 for i in range(args.pipeline_group_size):
                     ranks = [rank for rank in range(i, args.world_size, args.pipeline_group_size)]
                     print(args.rank, ranks)
-                    data_group = torch.distributed.new_group(ranks, backend='gloo')
+                    data_group = torch.distributed.new_group(ranks, backend='gloo', timeout=datetime.timedelta(seconds=1*60))
                     if args.rank in ranks:
                         def to_global_rank(dp_rank):
                             rank = _PIPELINE_PARALLEL_RANK + dp_rank * args.pipeline_group_size
@@ -188,7 +188,7 @@ def reinit_dp_communicator(args):
                 for i in range(args.pipeline_group_size):
                     ranks = [rank for rank in range(i, args.world_size, args.pipeline_group_size)]
                     print(args.rank, ranks)
-                    data_group = torch.distributed.new_group(ranks, backend='gloo')
+                    data_group = torch.distributed.new_group(ranks, backend='gloo', timeout=datetime.timedelta(seconds=1*60))
                     if args.rank in ranks:
                         def to_global_rank(dp_rank):
                             rank = _PIPELINE_PARALLEL_RANK + dp_rank * args.pipeline_group_size
