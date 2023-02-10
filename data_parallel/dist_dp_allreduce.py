@@ -129,6 +129,7 @@ class AllReduceDP:
             self._allreduce_gradients()
         except Exception as e:
             print(e)
+            print("catch exception time: {}".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")))
             self.flag_dp_exception = 1
             self.reinit_dp_comm_if_wrong()
 

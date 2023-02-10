@@ -68,17 +68,20 @@ def get_megatron_tensor_parallel_world_size() -> int:
 
 def default_init(args):
     try:
+        print("before destroy_process_group time: {}".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")))
         dist.destroy_process_group()
+        print("after destroy_process_group time: {}".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")))
         # the first time will raise exception, so the following code is skipped.
         print('destroy comm, increase port for 1. (this could cause problem)')
         url = ':'.join(args.dist_url.split(':')[:-1])
-        port = int(args.dist_url.split(':')[-1]) #  + 1
+        port = int(args.dist_url.split(':')[-1]) + 1
         args.dist_url = f"{url}:{port}"
         print(f"new master url: {args.dist_url}")
     except:
         pass
+    print("before init_process_group time: {}".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")))
     dist.init_process_group(backend='gloo', timeout=datetime.timedelta(seconds=1*60), init_method=args.dist_url, world_size=args.world_size, rank=args.rank)
-    
+    print("after init_process_group time: {}".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")))
 
 def init_communicators(args):
     default_init(args)
