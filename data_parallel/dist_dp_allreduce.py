@@ -10,8 +10,10 @@ class AllReduceDP:
         self.global_rank = args.rank
         self.dp_group_size = args.data_group_size
         self.enable_tidy_profiling = (args.profiling == 'tidy_profiling')
-        self.dp_comm = get_data_parallel_comm()
+        # self.dp_comm = get_data_parallel_comm()
         self.dp_rank = get_data_parallel_rank()
+        self.pp_comm = get_pipeline_parallel_comm()
+        self.pp_rank = get_pipeline_parallel_rank()
         self.pp_group_size = get_pipeline_parallel_world_size()
         self.device = device
         self.dp_comm_stream = torch.cuda.Stream(device=device, priority=-1)
