@@ -5,18 +5,22 @@ from .flatten_utils import flatten_params
 
 class AllReduceDP:
     def __init__(self, args, device, module: torch.nn.Module, optimizer: torch.optim.Optimizer = None, flatten=True):
+        self.args = args
         self.flatten = flatten
         self.global_rank = args.rank
         self.dp_group_size = args.data_group_size
         self.enable_tidy_profiling = (args.profiling == 'tidy_profiling')
         self.dp_comm = get_data_parallel_comm()
         self.dp_rank = get_data_parallel_rank()
+        self.pp_group_size = get_pipeline_parallel_world_size()
+        self.device = device
         self.dp_comm_stream = torch.cuda.Stream(device=device, priority=-1)
         self.torch_optim_comp_stream = torch.cuda.default_stream(device=device)
         self.backward_ready_event = torch.cuda.Event(enable_timing=self.enable_tidy_profiling, blocking=False)
         self.allreduce_grad_ready_event = torch.cuda.Event(enable_timing=self.enable_tidy_profiling, blocking=False)
         self.optimizer_step_ready_event = torch.cuda.Event(enable_timing=self.enable_tidy_profiling, blocking=False)
 
+        self.flag_dp_exception = 0
         self.module = module
         num_paras, element_size = self._compute_total_para_num()
         print("Total number of parameters: {}, element size: {}, total size {} MB."
@@ -48,6 +52,10 @@ class AllReduceDP:
             self.optimizer_step_start_event = torch.cuda.Event(enable_timing=self.enable_tidy_profiling,
                                                                blocking=False)
 
+    @property
+    def dp_comm(self):
+        return get_data_parallel_comm()
+
     def _compute_total_para_num(self):
         total_count = 0
         element_size = 0
@@ -75,20 +83,32 @@ class AllReduceDP:
 
     def _allreduce_gradients(self):
         with torch.cuda.stream(self.dp_comm_stream):
+            print("--------before _allreduce_gradients---")
             cupy_dp_stream = cupy.cuda.ExternalStream(self.dp_comm_stream.cuda_stream)
+            print("--------before _allreduce_gradients wait_event---")
             self.dp_comm_stream.wait_event(self.backward_ready_event)
+            print("--------after _allreduce_gradients wait_event---")
             if self.flatten:
+                print("--------before _allreduce_gradients profile_mark_allreduce_start---")
                 self.profile_mark_allreduce_start()
+                print("--------before _allreduce_gradients all_reduce---")
                 self.dp_comm.all_reduce(self.flatten_para.grad, stream=cupy_dp_stream)
+                print("--------before _allreduce_gradients profile_mark_allreduce_end---")
                 self.profile_mark_allreduce_end()
             else:
+                print("--------before _allreduce_gradients profile_mark_allreduce_start in loop---")
                 for name, para in self.module.named_parameters():
                     if para.grad is None:
                         continue
+                    print("--------before _allreduce_gradients profile_mark_allreduce_start in loop---")
                     self.profile_mark_allreduce_start(name)
+                    print("--------before _allreduce_gradients all_reduce in loop---")
                     self.dp_comm.all_reduce(para.grad, stream=cupy_dp_stream)
+                    print("--------before _allreduce_gradients profile_mark_allreduce_end in loop---")
                     self.profile_mark_allreduce_end(name)
+            print("--------before _allreduce_gradients precord_event")
             self.dp_comm_stream.record_event(self.allreduce_grad_ready_event)
+            print("--------after _allreduce_gradients precord_event")
 
     def reinit_dp_comm_if_wrong(self):
         buffers = [torch.zeros(1).long().to(self.device) for _ in range(self.pp_group_size)]
