@@ -13,7 +13,8 @@ _TENSOR_PARALLEL_COMM = None
 _TENSOR_PARALLEL_RANK = None
 _TENSOR_PARALLEL_WORLD_SIZE = None
 
-import threading 
+import threading
+import datetime
 
 _LOCK = threading.RLock()
 
@@ -66,8 +67,6 @@ def get_megatron_tensor_parallel_world_size() -> int:
 
 
 def default_init(args):
-    import datetime
-    import time
     try:
         dist.destroy_process_group()
         # the first time will raise exception, so the following code is skipped.
