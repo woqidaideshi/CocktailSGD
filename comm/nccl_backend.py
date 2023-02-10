@@ -119,6 +119,7 @@ class NCCLCommunicator:
                   tensor: torch.Tensor,
                   stream=cupy.cuda.Stream.null,
                   op=cupy.cuda.nccl.NCCL_SUM):
+        print("------------nccl backed all_reduce")
         self.comm.allReduce(
             tensor.data_ptr(),
             tensor.data_ptr(),

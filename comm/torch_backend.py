@@ -88,6 +88,7 @@ class TorchCommunicator:
                    tensor: torch.Tensor,
                    stream = None,
                    op=dist.ReduceOp.SUM):
+        print("------------torch backed all_reduce")
         buffer = tensor.cpu()
         dist.all_reduce(buffer, group=self.process_group, op=op)
         tensor[:] = buffer.to(tensor.device)
