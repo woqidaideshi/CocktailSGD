@@ -656,9 +656,12 @@ class GpipeAsync:
               .format(self.global_rank, step, self.gradient_accumulate_step, backward_time-forward_time))
         if step == self.gradient_accumulate_step - 1:
             optimizer_time = time.time()
+            print("----------about before optimizer_step---")
             self.optimizer_step()
+            print("----------about after optimizer_step---0")
             torch.cuda.synchronize()
-            
+            print("----------about after optimizer_step---1")
+
             if self.enable_tidy_profiling:
                 self.profiling_forward_stage()
                 self.profiling_backward_stage()

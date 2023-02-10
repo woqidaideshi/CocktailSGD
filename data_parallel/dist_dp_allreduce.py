@@ -90,13 +90,34 @@ class AllReduceDP:
                     self.profile_mark_allreduce_end(name)
             self.dp_comm_stream.record_event(self.allreduce_grad_ready_event)
 
+    def reinit_dp_comm_if_wrong(self):
+        buffers = [torch.zeros(1).long().to(self.device) for _ in range(self.pp_group_size)]
+        self.pp_comm.all_gather(torch.tensor(self.flag_dp_exception).long().to(self.device), buffers)
+        self.flag_dp_exception = max([s.item() for s in buffers])
+
+        if self.flag_dp_exception:
+            reinit_dp_communicator(self.args)
+            self.flag_dp_exception = 0
+
     def optimizer_step(self):
-        self._allreduce_gradients()
+        print("-----in optimizer_step---0")
+        try:
+            self._allreduce_gradients()
+        except Exception as e:
+            print(e)
+            self.flag_dp_exception = 1
+            self.reinit_dp_comm_if_wrong()
+
+        print("-----in optimizer_step---1")
         with torch.cuda.stream(self.torch_optim_comp_stream):
             self.torch_optim_comp_stream.wait_event(self.allreduce_grad_ready_event)
+            print("-----in optimizer_step---2")
             self.profile_mark_optimizer_step_start()
+            print("-----in optimizer_step---3")
             self.optimizer.step()
+            print("-----in optimizer_step---4")
             self.torch_optim_comp_stream.record_event(self.optimizer_step_ready_event)
+            print("-----out optimizer_step---")
 
     def set_time_stamp(self, init_time_stamp, init_event):
         self.init_event = init_event

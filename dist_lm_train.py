@@ -276,9 +276,11 @@ def main():
     np.random.seed(args.seed)
     
     if args.use_cuda:
+        print("use cuda, cuda id: {}".format(args.cuda_id))
         assert (torch.cuda.is_available())
         device = torch.device('cuda', args.cuda_id)
     else:
+        print("use cpu")
         device = torch.device('cpu')
         
     init_communicators(args)
