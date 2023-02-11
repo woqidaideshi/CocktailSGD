@@ -66,7 +66,7 @@ def get_megatron_tensor_parallel_world_size() -> int:
     return _TENSOR_PARALLEL_WORLD_SIZE
 
 
-def default_init(args):
+def default_init(args, timeout=1):
     try:
         print("before destroy_process_group time: {}".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")))
         dist.destroy_process_group()
@@ -80,7 +80,7 @@ def default_init(args):
     except Exception as e:
         print("destroy_process_group except: {}".format(str(e)))
     print("before init_process_group time: {}".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")))
-    dist.init_process_group(backend='gloo', timeout=datetime.timedelta(seconds=1*60), init_method=args.dist_url, world_size=args.world_size, rank=args.rank)
+    dist.init_process_group(backend='gloo', timeout=datetime.timedelta(seconds=timeout*60), init_method=args.dist_url, world_size=args.world_size, rank=args.rank)
     print("after init_process_group time: {}".format(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")))
 
 def init_communicators(args):
@@ -162,7 +162,7 @@ def reinit_dp_communicator(args):
     
     print('###### reinit start #######')
     
-    default_init(args)
+    default_init(args, timeout=2)
     assert args.world_size == args.data_group_size * args.pipeline_group_size
     if args.world_size == args.data_group_size * args.pipeline_group_size:
         #    We do the following hard code alignment of communication groups:
@@ -190,7 +190,7 @@ def reinit_dp_communicator(args):
                 for i in range(args.pipeline_group_size):
                     ranks = [rank for rank in range(i, args.world_size, args.pipeline_group_size)]
                     print(args.rank, ranks)
-                    data_group = torch.distributed.new_group(ranks, backend='gloo', timeout=datetime.timedelta(seconds=1*60))
+                    data_group = torch.distributed.new_group(ranks, backend='gloo', timeout=datetime.timedelta(seconds=2*60))
                     if args.rank in ranks:
                         def to_global_rank(dp_rank):
                             rank = _PIPELINE_PARALLEL_RANK + dp_rank * args.pipeline_group_size
