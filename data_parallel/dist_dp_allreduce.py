@@ -85,34 +85,22 @@ class AllReduceDP:
 
     def _allreduce_gradients(self):
         with torch.cuda.stream(self.dp_comm_stream):
-            print("--------before _allreduce_gradients---")
             cupy_dp_stream = cupy.cuda.ExternalStream(self.dp_comm_stream.cuda_stream)
-            print("--------before _allreduce_gradients wait_event---")
             self.dp_comm_stream.wait_event(self.backward_ready_event)
-            print("--------after _allreduce_gradients wait_event---")
             if self.flatten:
-                print("--------before _allreduce_gradients profile_mark_allreduce_start---")
                 self.profile_mark_allreduce_start()
-                print("--------before _allreduce_gradients all_reduce---")
                 self.dp_comm.all_reduce(self.flatten_para.grad, stream=cupy_dp_stream)
-                print("--------before _allreduce_gradients profile_mark_allreduce_end---")
                 self.profile_mark_allreduce_end()
             else:
-                print("--------before _allreduce_gradients profile_mark_allreduce_start in for loop---")
                 param_count = 0
                 for name, para in self.module.named_parameters():
                     if para.grad is None:
                         continue
-                    # print("--------before _allreduce_gradients profile_mark_allreduce_start in loop {}---".format(param_count))
                     self.profile_mark_allreduce_start(name)
-                    # print("--------before _allreduce_gradients all_reduce in loop {}---".format(param_count))
                     self.dp_comm.all_reduce(para.grad, stream=cupy_dp_stream)
-                    # print("--------before _allreduce_gradients profile_mark_allreduce_end in loop {}---".format(param_count))
                     self.profile_mark_allreduce_end(name)
                     param_count += 1
-            print("--------before _allreduce_gradients precord_event")
             self.dp_comm_stream.record_event(self.allreduce_grad_ready_event)
-            print("--------after _allreduce_gradients precord_event")
 
     def reinit_dp_comm_if_wrong(self):
         buffers = [torch.zeros(1).long().to(self.device) for _ in range(self.pp_group_size)]
@@ -124,7 +112,6 @@ class AllReduceDP:
             self.flag_dp_exception = 0
 
     def optimizer_step(self):
-        print("-----in optimizer_step---0")
         try:
             self._allreduce_gradients()
         except Exception as e:
@@ -133,16 +120,11 @@ class AllReduceDP:
             self.flag_dp_exception = 1
             self.reinit_dp_comm_if_wrong()
 
-        print("-----in optimizer_step---1")
         with torch.cuda.stream(self.torch_optim_comp_stream):
             self.torch_optim_comp_stream.wait_event(self.allreduce_grad_ready_event)
-            print("-----in optimizer_step---2")
             self.profile_mark_optimizer_step_start()
-            print("-----in optimizer_step---3")
             self.optimizer.step()
-            print("-----in optimizer_step---4")
             self.torch_optim_comp_stream.record_event(self.optimizer_step_ready_event)
-            print("-----out optimizer_step---")
 
     def set_time_stamp(self, init_time_stamp, init_event):
         self.init_event = init_event

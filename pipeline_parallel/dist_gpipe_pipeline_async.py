@@ -656,11 +656,8 @@ class GpipeAsync:
               .format(self.global_rank, step, self.gradient_accumulate_step, backward_time-forward_time))
         if step == self.gradient_accumulate_step - 1:
             optimizer_time = time.time()
-            print("----------about before optimizer_step---")
             self.optimizer_step()
-            print("----------about after optimizer_step---0")
             torch.cuda.synchronize()
-            print("----------about after optimizer_step---1")
 
             if self.enable_tidy_profiling:
                 self.profiling_forward_stage()
@@ -677,7 +674,6 @@ class GpipeAsync:
         iter_time = end_time - start_time
         print("Rank {} node whole iteration takes {:3.2f}s".format(
             self.global_rank, iter_time))
-        print("-------------------------------------------")
         # torch.cuda.empty_cache()
         # print(torch.cuda.memory_summary())
         self.global_step += 1
