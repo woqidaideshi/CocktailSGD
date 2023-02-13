@@ -26,6 +26,7 @@ import threading
 class CocktailSGDDP:
     def __init__(self, args, device, module: torch.nn.Module, optimizer: torch.optim.Optimizer = None, flatten=False):
         # assert not flatten
+        self.step = 0
         self.args = args
         self.dp_bits = args.dp_bits
         self.flatten = flatten
@@ -468,8 +469,13 @@ class CocktailSGDDP:
     def _try_partial_sync(self):
         try:
             self._partial_sync()
-        except:
+            self.step += 1
+        except Exception as e:
+            print("_partial_sync except Exception: {} in step: {}.".format(str(e), self.step))
             self.flag_dp_exception = 1
+        if self.flag_dp_exception == 0 and self.step % 20 == 0:
+            self.flag_dp_exception = 1
+            print("set flag_dp_exception as 1 in step: {}.".format(self.step))
 
     def pre_optimizer_step(self):
         if not flag.FLAG_DISABLE_COMPRESSION:
