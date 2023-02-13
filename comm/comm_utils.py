@@ -178,9 +178,8 @@ def reinit_dp_communicator(args):
             
             dp_backend = getattr(args, 'dp_backend', 'gloo')
             if dp_backend == 'nccl':
-            
-                raise Exception('NCCL cannot reinit.')
-            
+                _DATA_PARALLEL_COMM = NCCLCommunicator(_DATA_PARALLEL_RANK, args.cuda_id, args.data_group_size,
+                                                       "data_group_"+str(args.rank % args.pipeline_group_size))
             elif dp_backend == 'gloo':
                 
                 for i in range(args.pipeline_group_size):
