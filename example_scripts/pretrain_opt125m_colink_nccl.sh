@@ -12,7 +12,7 @@ cd ../
 ARGS="--model-name ./empty_model_configs/opt-125m \
 --tokenizer-name ./empty_model_configs/opt-125m \
 --load-pretrained-model false \
---project-name cocktail-allreduce-p2p \
+--project-name cocktail-allreduce-colink_nccl \
 --model-type opt \
 --optimizer adam \
 --seed 42 \
